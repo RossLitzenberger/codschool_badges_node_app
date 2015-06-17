@@ -1,43 +1,44 @@
+/*jshint node: true */
 'use strict';
 
-var socket = require('../lib/socket');
-var badges = require('../models/badges');
 var _ = require('underscore');
+var model = require('../models/badges');
 
 /**
- *  Save our badges
- */
-exports.save = function(req, res, next) {
-  var badgeList = _.clone(req.body);
-  badges.save(badgeList, function(err, data){
-    if (err) return res.send(503, err);
-    next();
-  });
+* Send badges to model
+*/
+exports.save = function(req, res, next){
+    var badges = _.clone(req.body);
+    model.save(badges, function(err){
+
+        if(err) return res.json(503, { error: true });
+
+        next();
+        model.trim();
+    });
 };
 
 /**
- *  Trim the badges
- */
-exports.trim = function(req, res, next) {
-  badges.trim();
-  next();
+* Send badges to pub/sub socket in model
+*/
+exports.send = function(req, res, next){
+    var badges = _.clone(req.body);
+    model.send(badges, function(err){
+        if(err) return res.json(503, { error: true });
+        res.json(200, {
+            error: null
+        });
+    });
 };
 
-/**
- *  Send our badges
- */
-exports.send = function(req, res, next) {
-  var badgeList = _.clone(req.body);
-  badgeList.forEach(socket.send);
-  res.send(200, 'success');
-};
 
 /**
- *  Get our badges
- */
-exports.get = function(req, res, next) {
-  badges.get(function(err, data){
-    if (err) return res.send(503, 'Trouble loading badges');
-    res.json(200, data.map(JSON.parse));
-  });
+* Get 10 badges from model
+*/
+
+exports.get = function(req, res){
+    model.get(function(err, data){
+        if(err) return res.json(503, { error: true });
+        res.json(200, data);
+    });
 };
